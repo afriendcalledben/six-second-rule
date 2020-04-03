@@ -1,6 +1,17 @@
-var app = require('express')();
-var http = require('http').createServer(app);
-var io = require('socket.io')(http);
+'use strict';
+
+const express = require('express');
+const socketIO = require('socket.io');
+
+const PORT = process.env.PORT || 3000;
+const INDEX = '/index.html';
+
+const server = express()
+  .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
+  .listen(PORT, () => console.log(`Listening on ${PORT}`));
+
+const io = socketIO(server);
+
 var users = [];
 var userDict = {};
 var allcolors = ['C0392B','9B59B6','3498DB','1ABC9C','27AE60','F1C40F','F39C12'];
@@ -17,15 +28,10 @@ var votes = [];
 var readyToPlayTotal = 0;
 
 var coloursinuse = [];
-let port = process.env.PORT;
-if (port == null || port == "") {
-  port = 3000;
-}
-const INDEX = '/index.html';
-
-const server = app
-  .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
-  .listen(port, () => console.log(`Listening on ${port}`));
+app.get('/', function(req, res){
+  console.log(__dirname);
+  res.sendFile(__dirname+'/index.html');
+});
 
 io.on('connection', function(socket){
 
