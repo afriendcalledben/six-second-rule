@@ -142,6 +142,8 @@ io.on('connection', function(socket){
     } else {
       console.log('User '+id+' disconnected');
     }
+    if (user.length < 2) gameState = 0;
+    io.emit('game_state', gameState);
     io.emit('user_list_updated', JSON.stringify(users));
   }
   socket.on('vote_submitted', function(msg){
