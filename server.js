@@ -28,10 +28,6 @@ var votes = [];
 var readyToPlayTotal = 0;
 
 var coloursinuse = [];
-app.get('/', function(req, res){
-  console.log(__dirname);
-  res.sendFile(__dirname+'/index.html');
-});
 
 io.on('connection', function(socket){
 
