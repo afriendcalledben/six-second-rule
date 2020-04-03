@@ -25,7 +25,7 @@ var answerTime = 6;
 var currTimer = 0;
 var timerId = -1;
 var questionsTxt = fs.readFileSync(__dirname+"/questions.txt").toString('utf-8');
-var questions = questionsTxt.split("\r\n");
+var questions = questionsTxt.split("\n");
 console.log(questions);
 var votes = [];
 var readyToPlayTotal = 0;
