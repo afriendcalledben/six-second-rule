@@ -17,10 +17,15 @@ var votes = [];
 var readyToPlayTotal = 0;
 
 var coloursinuse = [];
- app.get('/', function(req, res){
-  console.log(__dirname);
-  res.sendFile(__dirname+'/index.html');
-});
+let port = process.env.PORT;
+if (port == null || port == "") {
+  port = 3000;
+}
+const INDEX = '/index.html';
+
+const server = express()
+  .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
+  .listen(port, () => console.log(`Listening on ${port}`));
 
 io.on('connection', function(socket){
 
@@ -147,8 +152,4 @@ io.on('connection', function(socket){
   });
 })
 
-let port = process.env.PORT;
-if (port == null || port == "") {
-  port = 3000;
-}
 app.listen(port);
