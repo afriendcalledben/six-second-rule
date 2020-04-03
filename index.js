@@ -23,7 +23,7 @@ if (port == null || port == "") {
 }
 const INDEX = '/index.html';
 
-const server = express()
+const server = app
   .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
   .listen(port, () => console.log(`Listening on ${port}`));
 
@@ -151,5 +151,3 @@ io.on('connection', function(socket){
 
   });
 })
-
-app.listen(port);
