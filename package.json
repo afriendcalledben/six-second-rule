@@ -1,7 +1,7 @@
 {
   "name": "six-second-rule",
-  "version": "0.0.1",
-  "description": "say things fast",
+  "version": "1.0.0",
+  "description": "like 5 Second Rule but online",
   "dependencies": {
     "express": "^4.17.1",
     "socket.io": "^2.3.0"
