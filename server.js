@@ -142,7 +142,7 @@ io.on('connection', function(socket){
     } else {
       console.log('User '+id+' disconnected');
     }
-    if (user.length < 2) resetGame();
+    if (users.length < 2) resetGame();
     io.emit('game_state', gameState);
     io.emit('user_list_updated', JSON.stringify(users));
   }
