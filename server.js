@@ -2,28 +2,31 @@
 
 const express = require('express');
 const socketIO = require('socket.io');
+const fs = require('fs');
 
 const PORT = process.env.PORT || 3000;
 const INDEX = '/index.html';
 
 const server = express()
-  .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
+  .use("/", (req, res) => res.sendFile(INDEX, { root: __dirname }))
+  .use("/audio/awooga.wav", (req, res) => res.sendFile('/audio/awooga.wav', { root: __dirname }))
   .listen(PORT, () => console.log(`Listening on ${PORT}`));
 
 const io = socketIO(server);
 
 var users = [];
 var userDict = {};
-var allcolors = ['C0392B','9B59B6','3498DB','1ABC9C','27AE60','F1C40F','F39C12'];
-var currentAsker;
-var currentAnswerer;
+var allcolors = ['006ba6','00496ff','ffbc42','d81159','8f2d56'];
 var gameState = 0;
 var currentRound = -1;
 var currentAsker = 0;
 var currentAnswerer = 0;
 var answerTime = 6;
+var currTimer = 0;
 var timerId = -1;
-var questions = ['THINGS YOU DO IN THE PARK', 'THINGS HOT SAUCE IS GOOD ON', 'THINGS YOU MISS'];
+var questionsTxt = fs.readFileSync(__dirname+"/questions.txt").toString('utf-8');
+var questions = questionsTxt.split("\r\n");
+console.log(questions);
 var votes = [];
 var readyToPlayTotal = 0;
 
@@ -58,6 +61,8 @@ io.on('connection', function(socket){
     currentAsker = ((round == 0) ? 0 : round%users.length);
     currentAnswerer = (round+1)%users.length;
     var round = {asker:users[currentAsker], answerer:users[currentAnswerer], round:currentRound, question:questions[currentRound]};
+    console.log(currentAsker+" asking "+currentAnswerer);
+    io.emit('user_list_updated', JSON.stringify(users));
     io.emit('go_to_round', JSON.stringify(round));
   }
   // Ready for the next round
@@ -146,9 +151,35 @@ io.on('connection', function(socket){
     {
       var yes = votes.split("1").length - 1;
       var no = votes.split("0").length - 1;
-      console.log('All votes cast. Yes:'+yes+' No:'+no);
       io.emit('show_vote_result', yes, no);
+      if (yes >= no)
+      {
+        users[currentAnswerer].points++;
+        io.emit('user_list_updated', JSON.stringify(users));
+        currentRound++;
+        goToRound(currentRound);
+      } else {
+        currentRound++;
+        goToRound(currentRound);
+      }
+    }
 
+    function resetGame()
+    {
+      users = [];
+      userDict = {};
+      allcolors = ['006ba6','00496ff','ffbc42','d81159','8f2d56'];
+      gameState = 0;
+      currentRound = -1;
+      currentAsker = 0;
+      currentAnswerer = 0;
+      currTimer = 0;
+      timerId = -1;
+      votes = [];
+      readyToPlayTotal = 0;
+      coloursinuse = [];
+      io.emit('reset_game');
+      io.emit('user_list_updated', JSON.stringify(users));
     }
 
   });
