@@ -1,0 +1,14 @@
+- Enter your name and press Enter
+- Check if game is currently in play
+- Room displays list of currently connected users
+- Button to press start game
+  - Locks players in
+- Rearranges the list of players
+- Selects the first asking players
+- Selects the first answering player
+- Displays both names at the top
+- Card only displays to asking with a button that says start timer (Action says read out question and hit start timer)
+- Once timer starts the card appears to all
+- After 6 seconds, a vote button appears to all but the answering players
+- People vote yes or no - majority wins
+- Points are allocated

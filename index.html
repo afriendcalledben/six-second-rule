@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <!--<style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #chat_messages { list-style-type: none; margin: 0; padding: 0; }
+      #chat_messages li { padding: 5px 10px; }
+      #chat_messages li:nth-child(odd) { background: #eee; }
+      #user_list { background: #000; padding: 3px; position: fixed; right: 0; height: 100%; }
+      #user_list li { padding: 5px 10px; }
+      #user_list li:nth-child(odd) { background: #eee; }
+    </style>-->
+  </head>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+  $(function () {
+    var socket = io();
+    var user_entered = false;
+    var name = "";
+    var usercolour = "";
+    var timer = 6;
+    var timerId = -1;
+    var gameState = 0;
+    var currentRound = {};
+    $('#user_name').submit(function(e){
+      e.preventDefault(); // prevents page reloading
+      name = $('#user_name input').val();
+      socket.emit('user_joined', $('#user_name input').val());
+      $('#user_name input').val('');
+      $('#user_name').hide();
+      $('#ready_btn').show();
+      user_entered = true;
+      return false;
+    });
+    socket.on('game_state', function(msg)
+    {
+      gameState = msg;
+      $('#game_state').text('Game state is: '+msg);
+    });
+    socket.on('timer_started', function() {
+      if (currentRound.answerer.id == socket.id) {
+        $('#status').text("ANSWER NOW!");
+      }
+      $('#question').text("NAME 3 "+currentRound.question);
+    });
+    socket.on('timer_update', function(msg) {
+      $('#timer').text(msg+' second'+((msg == 1) ? '' : 's'));
+    });
+    socket.on('timer_ended', function() {
+      $('#timer').text("TIME'S UP!");
+      showVotes();
+    });
+    socket.on('go_to_round', function(msg){
+      currentRound = JSON.parse(msg);
+      $('#round_title').text("Round "+(currentRound.round+1));
+      if (currentRound.asker.id == socket.id)
+      {
+        $('#start_timer').show();
+        $('#status').text("YOU are asking "+currentRound.answerer.name+". Read the question below out loud and then hit START TIMER");
+        $('#question').text("NAME 3 "+currentRound.question);
+      } else {
+        if (currentRound.answerer.id == socket.id) {
+          $('#status').text(currentRound.asker.name+" is asking YOU. Listen to the question and answer as soon as the timer starts.");
+        } else {
+          $('#status').text(currentRound.asker.name+" is asking "+currentRound.answerer.name);
+        }
+        $('#start_timer').hide();
+        $('#question').text("");
+      }
+    });
+    socket.on('timer_ended', function() { showVotes(socket.id); });
+    socket.on('chat_message', function(msg){
+      $('#chat_messages').append($('<li>').text(msg));
+    });
+    socket.on('user_list_updated', function(msg){
+      var users = JSON.parse(msg);
+      $('#user_list').empty();
+      for (var i = 0; i < users.length; i++)
+      {
+        var readyToPlay = ((users[i].readyToPlay) ? 'READY' : '');
+        $('#user_list').append($('<li>').html('<font color="#'+users[i].color+'">' + users[i].name + ' ' + ((socket.id == users[i].id) ? '(YOU)' : '') + '</font> - ' + ((gameState == 0) ? readyToPlay : (users[i].points+' points'))));
+      }
+      if (users.length > 1)
+      {
+        $('#status').text(users.length+' players waiting.');
+      } else {
+        $('#status').text('Awaiting players...');
+      }
+    });
+    $('#start_timer').hide();
+    $('#vote').hide();
+
+    function startTimer()
+    {
+      $('#start_timer').prop('disabled', true);
+      socket.emit('start_timer');
+    }
+
+    function readyToPlay()
+    {
+      socket.emit('ready_to_play');
+      $('#ready_btn').hide();
+    }
+
+    function showVotes(id)
+    {
+      if (currentRound.answerer.id != id) {
+      $('#vote').show();
+      $('#vote_yes_btn').prop('disabled', false);
+      $('#vote_no_btn').prop('disabled', false);
+    } else {
+      $('#vote').hide();
+      $('#vote_yes_btn').prop('disabled', true);
+      $('#vote_no_btn').prop('disabled', true);
+      }
+    }
+    function showVoteResults(yes, no)
+    {
+      $('#vote').hide();
+      $('#vote_result').text('Votes are in! '+currentRound.answerer.name+' '+((yes < no) ? 'DON\'T' : '')+' get the point.');
+    }
+    socket.on('show_vote_result', function(yes, no) { showVoteResults(yes, no) ; })
+
+    function submitVote(isYes = true)
+    {
+      console.log('Vote submitted! isYes:'+isYes);
+      $('#vote_yes_btn').prop('disabled', true);
+      $('#vote_no_btn').prop('disabled', true);
+      socket.emit('vote_submitted', ((isYes) ? 1 : 0));
+    }
+
+    $('#vote_yes_btn').click(()=>submitVote(true));
+    $('#vote_no_btn').click(()=>submitVote(false));
+    $('#start_timer').click(startTimer);
+    $('#ready_btn').click(readyToPlay);
+    $('#ready_btn').hide();
+  });
+</script>
+  <body>
+    <h1>6 Second Rule</h1>
+    <hr />
+    <h3>The Timer</h3>
+    <p>Timer: <span  id="timer">Paused</span></p>
+    <button id="start_timer">Start Timer</button>
+    <hr />
+    <h3>The Players</h3>
+    <ul id="user_list"></ul>
+    <form id="user_name" action="">
+      <input autocomplete="off" /><button>Set name</button>
+    </form>
+    <hr />
+    <h3 id="round_title">The Round</h3>
+    <p id="game_state"></p>
+    <p id="status">Awaiting players...</p>
+    <p id="question"></p>
+    <button id="ready_btn">Ready to play</button>
+    <p id="vote">Do you accept the answer? <button id="vote_yes_btn">Yeah, it's good!</button> <button id="vote_no_btn">Absolutely not!</button></p>
+    <p id="vote_result"></p>
+  </body>
+</html>
