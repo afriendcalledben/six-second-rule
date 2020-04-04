@@ -11,6 +11,7 @@
       margin: 40
     }
   </style>
+  <script src="https://kit.fontawesome.com/52e0e0e4f5.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div class="container">
@@ -32,12 +33,14 @@
       </form>
     </div>
     <div class="card">
-      <div class="card-body" id="status">Awaiting players...</div>
+      <div class="card-body">
+        <div id="status"></div>
+        <div id="timer_bar" class="progress"  style="height: 30px">
+          <div class="progress-bar progress-bar-striped" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
     </div>
     <div id="game">
-    <div class="progress"  style="height: 30px">
-      <div class="progress-bar progress-bar-striped" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-    </div>
     <hr />
     <div class="card border-primary mb-3" id="question">
     <div class="card-header">Question</div>
@@ -45,6 +48,7 @@
       <h4 class="card-title" id="question_text"></h4>
       <button class="btn btn-primary btn-block" id="start_timer">Start Timer</button>
       <p id="vote">Do you accept the answer? <button id="vote_yes_btn" class="btn btn-success">Yeah, it's good!</button> <button id="vote_no_btn" class="btn btn-danger">Absolutely not!</button></p>
+      <p id="vote_result"></p>
     </div>
     </div>
     </div>
@@ -88,10 +92,10 @@
     });
     socket.on('timer_started', function() {
       if (currentRound.answerer.id == socket.id) {
-        $('#status').text("ANSWER NOW!");
+        setRoundText('<h1>ANSWER NOW!</h1>');
       }
       $('#question').show();
-      $('#question_text').text("NAME 3 "+currentRound.question);
+      $('#question_text').text("NAME 3 "+currentRound.question.toUpperCase());
     });
     socket.on('timer_update', function(msg) {
         var amount = 100 / 6 * msg;
@@ -100,30 +104,31 @@
     socket.on('go_to_round', function(msg){
       $('.progress-bar').css('width', '100%');
       currentRound = JSON.parse(msg);
+      $('#timer_bar').show();
       $('#game').show();
-      var roundTitle = "<h4>Round "+(currentRound.round+1)+"</h4>";
-      var askingStatus = '<p><span style="color:#'+currentRound.asker.color+'"><strong>'+currentRound.asker.name+'</strong>'+((currentRound.asker.id == socket.id) ? ' (you)' : '')+'</span> is asking <span style="color:#'+currentRound.answerer.color+'"><strong>'+currentRound.answerer.name+'</strong>'+((currentRound.answerer.id == socket.id) ? ' (you)' : '')+'</span></p>';
       var instruction = '';
       $('#question_text').text("");
 
       if (currentRound.asker.id == socket.id)
       {
         $('#start_timer').show();
-        instruction = '<p>Read the question below out loud and then hit START TIMER</p>';
+        instruction = '<br />Read the question below out loud and then hit <span class="badge badge-primary">START TIMER</span>';
         $('#question').show();
         $('#question_text').text("NAME 3 "+currentRound.question.toUpperCase());
       } else {
         if (currentRound.answerer.id == socket.id) {
-          instruction = '<p>Listen to the question and answer as soon as the timer starts.</p>';
+          instruction = '<br />Listen to the question and answer as soon as the timer starts.';
         }
         $('#start_timer').hide();
         $('#question').hide();
         $('#question_text').text("");
       }
-      $('#status').html(roundTitle+askingStatus+instruction);
+      setRoundText(instruction);
       $('#vote_result').text("");
     });
     socket.on('timer_ended', function() {
+      setRoundText('<h1>TIME\'S UP</h1>');
+      $('#timer_bar').hide();
       console.log($('#awooga')[0]);
       $('#awooga')[0].play();
       showVotes(socket.id);
@@ -135,23 +140,25 @@
       {
         var readyToPlay = ((users[i].readyToPlay) ? '<span class="badge badge-success badge-pill">READY</span>' : '');
         var points = '<span class="badge badge-primary badge-pill">'+users[i].points+' points</span>';
-        $('#user_list').append($('<li class="list-group-item d-flex justify-content-between align-items-center">').html('<font color="#'+users[i].color+'"><strong>' + users[i].name + '</strong> ' + ((socket.id == users[i].id) ? '(you)' : '') + '</font>' + ((gameState == 0) ? readyToPlay : points)));
+        $('#user_list').append($('<li class="list-group-item d-flex justify-content-between align-items-center">').html('<i class="fas fa-award"></i><span style="color:#'+users[i].color+'"><strong>' + users[i].name + '</strong> ' + ((socket.id == users[i].id) ? '(you)' : '') + '</span>' + ((gameState == 0) ? readyToPlay : points)));
       }
       if (gameState == 0) {
-      if (users.length > 1)
-      {
-        var ready = 0;
-        for (var i = 0; i < users.length; i++)
+        $('#timer_bar').hide();
+        if (users.length > 1)
         {
-          if (users[i].readyToPlay) ready++;
+          var ready = 0;
+          for (var i = 0; i < users.length; i++)
+          {
+            if (users[i].readyToPlay) ready++;
+          }
+          $('#status').text(users.length+' players waiting. '+ready+' players ready.');
+        } else {
+          $('#status').text('Awaiting players...');
         }
-        $('#status').text(users.length+' players waiting. '+ready+' players ready.');
-      } else {
-        $('#status').text('Awaiting players...');
-      }
       }
     });
     $('#start_timer').hide();
+    $('#timer_bar').hide();
     $('#vote').hide();
 
     function startTimer()
@@ -168,29 +175,37 @@
 
     function showVotes(id)
     {
+      $('#vote_result').hide();
       if (currentRound.answerer.id != id) {
-      $('#vote').show();
-      $('#vote_yes_btn').prop('disabled', false);
-      $('#vote_no_btn').prop('disabled', false);
-    } else {
-      $('#vote').hide();
-      $('#vote_yes_btn').prop('disabled', true);
-      $('#vote_no_btn').prop('disabled', true);
+        $('#vote').show();
+      } else {
+        $('#vote').hide();
       }
     }
     function showVoteResults(yes, no)
     {
       $('#vote').hide();
-      $('#vote_result').text('Votes are in! '+currentRound.answerer.name+' '+((yes < no) ? 'DON\'T' : '')+' get the point.');
+      $('#vote_result').hide();
+      setRoundText(((yes < no) ? '<i class="fas fa-thumbs-down text-danger"></i>' : '<i class="fas fa-thumbs-up text-success"></i>')+' <span style="color:#'+currentRound.answerer.color+'"><strong>'+currentRound.answerer.name+'</strong>'+((currentRound.answerer.id == socket.id) ? ' (you)' : '')+'</span> '+((yes < no) ? 'doesn\'t get' : 'gets')+' the point.', false);
     }
-    socket.on('show_vote_result', function(yes, no) { showVoteResults(yes, no) ; })
-
     function submitVote(isYes = true)
     {
       console.log('Vote submitted! isYes:'+isYes);
-      $('#vote_yes_btn').prop('disabled', true);
-      $('#vote_no_btn').prop('disabled', true);
+      $('#vote').hide();
+      $('#vote_result').show();
+      $('#vote_result').html('You voted '+((isYes) ? '<strong class="text-success">YES</strong> <i class="fas fa-thumbs-up text-success"></i>' : '<strong class="text-danger">NO</strong> <i class="fas fa-thumbs-down text-danger"></i>'));
       socket.emit('vote_submitted', ((isYes) ? 1 : 0));
+    }
+    socket.on('show_vote_result', function(yes, no) {
+      showVoteResults(yes, no);
+    });
+
+    function setRoundText(msg = '', ask = true)
+    {
+      var roundTitle = "<h4>Round "+(currentRound.round+1)+"</h4>";
+      var askingStatus = (ask) ? '<span style="color:#'+currentRound.asker.color+'"><strong>'+currentRound.asker.name+'</strong>'+((currentRound.asker.id == socket.id) ? ' (you)' : '')+'</span> is asking <span style="color:#'+currentRound.answerer.color+'"><strong>'+currentRound.answerer.name+'</strong>'+((currentRound.answerer.id == socket.id) ? ' (you)' : '')+'</span>' : '';
+      var instruction = (msg.length > 0) ? '<br />'+msg : '';
+      $('#status').html(roundTitle+'<p>'+askingStatus+instruction+'</p>');
     }
 
     $('#vote_yes_btn').click(()=>submitVote(true));

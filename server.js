@@ -124,6 +124,23 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     playerLeft(socket.id);
   });
+  function resetGame()
+  {
+    users = [];
+    userDict = {};
+    allcolors = ['006ba6','00496ff','ffbc42','d81159','8f2d56'];
+    gameState = 0;
+    currentRound = -1;
+    currentAsker = 0;
+    currentAnswerer = 0;
+    currTimer = 0;
+    timerId = -1;
+    votes = [];
+    readyToPlayTotal = 0;
+    coloursinuse = [];
+    io.emit('reset_game');
+    io.emit('user_list_updated', JSON.stringify(users));
+  }
   function playerLeft(id)
   {
     if (userDict[id]) {
@@ -158,31 +175,11 @@ io.on('connection', function(socket){
       {
         users[currentAnswerer].points++;
         io.emit('user_list_updated', JSON.stringify(users));
-        currentRound++;
-        goToRound(currentRound);
-      } else {
-        currentRound++;
-        goToRound(currentRound);
       }
+      setTimeout(function() {
+        currentRound++;
+        goToRound(currentRound);
+      }, 5000);
     }
-
-    function resetGame()
-    {
-      users = [];
-      userDict = {};
-      allcolors = ['006ba6','00496ff','ffbc42','d81159','8f2d56'];
-      gameState = 0;
-      currentRound = -1;
-      currentAsker = 0;
-      currentAnswerer = 0;
-      currTimer = 0;
-      timerId = -1;
-      votes = [];
-      readyToPlayTotal = 0;
-      coloursinuse = [];
-      io.emit('reset_game');
-      io.emit('user_list_updated', JSON.stringify(users));
-    }
-
   });
 })
