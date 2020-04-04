@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Socket.IO chat</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@700&display=swap" rel="stylesheet">
     <style>
     html,
     body {
@@ -14,8 +15,17 @@
   <script src="https://kit.fontawesome.com/52e0e0e4f5.js" crossorigin="anonymous"></script>
   </head>
   <body>
-    <div class="container">
-    <h1>6 Second Rule</h1>
+    <div class="container" style="margin-top: 20px">
+      <div class="row">
+      <div class="col col-sm-auto">
+        <h1 style="font-family: 'Bitter', serif;">6 Second Rule</h1>
+      </div>
+      <div class="col">
+        <div id="timer_bar" class="progress" style="height: 100%">
+          <div class="progress-bar" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+    </div>
     <hr />
     <div class="row">
     <div class="col col-sm-3">
@@ -28,29 +38,29 @@
       <form id="user_name" class="input-group mb-3">
         <input type="text" class="form-control" placeholder="Player name" aria-label="Player name" aria-describedby="basic-addon2">
         <div class="input-group-append">
-          <button class="btn btn-outline-secondary">Set Name</button>
+          <button class="btn btn-outline-secondary">Join</button>
         </div>
       </form>
     </div>
     <div class="card">
       <div class="card-body">
         <div id="status"></div>
-        <div id="timer_bar" class="progress"  style="height: 30px">
-          <div class="progress-bar progress-bar-striped" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
+        <button class="btn btn-primary btn-block" id="start_timer">Start Timer</button>
+        <p id="vote">Did they manage it?<br /><button id="vote_yes_btn" class="btn btn-success"><i class="fas fa-thumbs-up"></i> Yep</button> <button id="vote_no_btn" class="btn btn-danger"><i class="fas fa-thumbs-down"></i> Nope</button></p>
+        <p id="vote_result"></p>
       </div>
     </div>
-    <div id="game">
-    <hr />
-    <div class="card border-primary mb-3" id="question">
-    <div class="card-header">Question</div>
-    <div class="card-body text-primary">
-      <h4 class="card-title" id="question_text"></h4>
-      <button class="btn btn-primary btn-block" id="start_timer">Start Timer</button>
-      <p id="vote">Do you accept the answer? <button id="vote_yes_btn" class="btn btn-success">Yeah, it's good!</button> <button id="vote_no_btn" class="btn btn-danger">Absolutely not!</button></p>
-      <p id="vote_result"></p>
     </div>
-    </div>
+    <div class="col">
+    <div id="game" style="width: 250px; height: 400px">
+      <div class="card border-primary mb-3 front" style="border-color: #eee!important; border-width: 4px; border-radius: 1rem;">
+      </div>
+      <div class="card mb-3 back" style="border-width: 4px; border-radius: 1rem;" id="question_card">
+        <div class="card-header" style="border: none; font-family: 'Bitter', serif; color:#fff" id="question_header">Question</div>
+      <div class="card-body">
+        <p class="card-title" style="font-family: 'Bitter', serif; font-size: 30px; color:#333" id="question_text">Name 3 things</p>
+      </div>
+      </div>
     </div>
     </div>
     </div
@@ -64,6 +74,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://code.jquery.com/jquery-1.11.0.js"></script>
+<script src="https://cdn.rawgit.com/nnattawat/flip/master/dist/jquery.flip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
 <script>
@@ -76,6 +87,7 @@
     var timerId = -1;
     var gameState = 0;
     var currentRound = {};
+    var card_colours = ['#5bc0eb','#fde74c','#9bc53d','#e55934','#fa7921'];
     $('#user_name').submit(function(e){
       e.preventDefault(); // prevents page reloading
       name = $('#user_name input').val();
@@ -94,41 +106,40 @@
       if (currentRound.answerer.id == socket.id) {
         setRoundText('<h1>ANSWER NOW!</h1>');
       }
-      $('#question').show();
-      $('#question_text').text("NAME 3 "+currentRound.question.toUpperCase());
+      $('.progress-bar').addClass('progress-bar-striped');
+      $('.progress-bar').addClass('progress-bar-animated');
+      showCard(currentRound.question);
     });
     socket.on('timer_update', function(msg) {
         var amount = 100 / 6 * msg;
         $('.progress-bar').css('width', amount+'%');
+        $('.progress-bar').html('<span style="font-family: \'Bitter\', serif; font-size:30px">'+msg+'</span>');
     });
     socket.on('go_to_round', function(msg){
       $('.progress-bar').css('width', '100%');
       currentRound = JSON.parse(msg);
-      $('#timer_bar').show();
-      $('#game').show();
       var instruction = '';
-      $('#question_text').text("");
+      hideCard();
 
       if (currentRound.asker.id == socket.id)
       {
         $('#start_timer').show();
-        instruction = '<br />Read the question below out loud and then hit <span class="badge badge-primary">START TIMER</span>';
-        $('#question').show();
-        $('#question_text').text("NAME 3 "+currentRound.question.toUpperCase());
+        instruction = '<br />Read the question below out loud and then hit:';
+        showCard(currentRound.question);
       } else {
         if (currentRound.answerer.id == socket.id) {
           instruction = '<br />Listen to the question and answer as soon as the timer starts.';
         }
         $('#start_timer').hide();
-        $('#question').hide();
-        $('#question_text').text("");
+        hideCard();
       }
       setRoundText(instruction);
       $('#vote_result').text("");
     });
     socket.on('timer_ended', function() {
       setRoundText('<h1>TIME\'S UP</h1>');
-      $('#timer_bar').hide();
+      $('.progress-bar').removeClass('progress-bar-striped');
+      $('.progress-bar').html('');
       console.log($('#awooga')[0]);
       $('#awooga')[0].play();
       showVotes(socket.id);
@@ -136,14 +147,18 @@
     socket.on('user_list_updated', function(msg){
       var users = JSON.parse(msg);
       $('#user_list').empty();
-      for (var i = 0; i < users.length; i++)
-      {
-        var readyToPlay = ((users[i].readyToPlay) ? '<span class="badge badge-success badge-pill">READY</span>' : '');
-        var points = '<span class="badge badge-primary badge-pill">'+users[i].points+' points</span>';
-        $('#user_list').append($('<li class="list-group-item d-flex justify-content-between align-items-center">').html('<i class="fas fa-award"></i><span style="color:#'+users[i].color+'"><strong>' + users[i].name + '</strong> ' + ((socket.id == users[i].id) ? '(you)' : '') + '</span>' + ((gameState == 0) ? readyToPlay : points)));
+      $('#user_list').append($('<li class="list-group-item  list-group-item-secondary">').html('<strong>Players</strong>'));
+      if (users.length == 0) {
+      $('#user_list').append($('<li class="list-group-item">').html('Awaiting players...'));
+      } else {
+        for (var i = 0; i < users.length; i++)
+        {
+          var readyToPlay = ((users[i].readyToPlay) ? '<span class="badge badge-success badge-pill">READY</span>' : '');
+          var points = '<span class="badge badge-primary badge-pill">'+users[i].points+' points</span>';
+          $('#user_list').append($('<li class="list-group-item d-flex justify-content-between align-items-center">').html('<span style="color:#'+users[i].color+'"><strong>' + users[i].name + '</strong> ' + ((socket.id == users[i].id) ? '(you)' : '') + '</span>' + ((gameState == 0) ? readyToPlay : points)));
+        }
       }
       if (gameState == 0) {
-        $('#timer_bar').hide();
         if (users.length > 1)
         {
           var ready = 0;
@@ -158,7 +173,6 @@
       }
     });
     $('#start_timer').hide();
-    $('#timer_bar').hide();
     $('#vote').hide();
 
     function startTimer()
@@ -182,10 +196,12 @@
         $('#vote').hide();
       }
     }
+
     function showVoteResults(yes, no)
     {
       $('#vote').hide();
       $('#vote_result').hide();
+      hideCard();
       setRoundText(((yes < no) ? '<i class="fas fa-thumbs-down text-danger"></i>' : '<i class="fas fa-thumbs-up text-success"></i>')+' <span style="color:#'+currentRound.answerer.color+'"><strong>'+currentRound.answerer.name+'</strong>'+((currentRound.answerer.id == socket.id) ? ' (you)' : '')+'</span> '+((yes < no) ? 'doesn\'t get' : 'gets')+' the point.', false);
     }
     function submitVote(isYes = true)
@@ -202,10 +218,26 @@
 
     function setRoundText(msg = '', ask = true)
     {
-      var roundTitle = "<h4>Round "+(currentRound.round+1)+"</h4>";
+      var roundTitle = '<h4 style="font-family: \'Bitter\', serif;">Round '+(currentRound.round+1)+'</h4>';
       var askingStatus = (ask) ? '<span style="color:#'+currentRound.asker.color+'"><strong>'+currentRound.asker.name+'</strong>'+((currentRound.asker.id == socket.id) ? ' (you)' : '')+'</span> is asking <span style="color:#'+currentRound.answerer.color+'"><strong>'+currentRound.answerer.name+'</strong>'+((currentRound.answerer.id == socket.id) ? ' (you)' : '')+'</span>' : '';
       var instruction = (msg.length > 0) ? '<br />'+msg : '';
       $('#status').html(roundTitle+'<p>'+askingStatus+instruction+'</p>');
+    }
+
+    function showCard(question)
+    {
+      var random_colour = Math.floor(Math.random() * (card_colours.length-0.00001));
+      var color = card_colours[random_colour];
+      $('#question_text').text('Name 3 '+question);
+      $('#question_card').css('border-color', color);
+      $('#question_header').css('background-color', color);
+      $('#game').flip(true);
+    }
+
+    function hideCard()
+    {
+      console.log("HIDE CARD");
+      $('#game').flip(false);
     }
 
     $('#vote_yes_btn').click(()=>submitVote(true));
@@ -213,7 +245,7 @@
     $('#start_timer').click(startTimer);
     $('#ready_btn').click(readyToPlay);
     $('#ready_btn').hide();
-    $('#game').hide();
+    $('#game').flip({trigger:'manual'});
   });
 </script>
 </html>

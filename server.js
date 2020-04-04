@@ -26,6 +26,7 @@ var currTimer = 0;
 var timerId = -1;
 var questionsTxt = fs.readFileSync(__dirname+"/questions.txt").toString('utf-8');
 var questions = questionsTxt.split("\n");
+var shuffledQuestions = [];
 console.log(questions);
 var votes = [];
 var readyToPlayTotal = 0;
@@ -50,17 +51,31 @@ io.on('connection', function(socket){
   });
   function goToStart()
   {
+    shuffledQuestions = shuffle(Array.from(questions));
+    console.log(shuffledQuestions);
     gameState = 1;
     io.emit('game_state', gameState);
 
     currentRound = 0;
     goToRound(0);
   }
+  function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+    while (0 !== currentIndex) {
+      randomIndex = Math.floor(Math.rand  om() * currentIndex);
+      currentIndex -= 1;
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+
+    return array;
+  }
   function goToRound(round)
   {
     currentAsker = ((round == 0) ? 0 : round%users.length);
     currentAnswerer = (round+1)%users.length;
-    var round = {asker:users[currentAsker], answerer:users[currentAnswerer], round:currentRound, question:questions[currentRound]};
+    var round = {asker:users[currentAsker], answerer:users[currentAnswerer], round:currentRound, question:shuffledQuestions[currentRound]};
     console.log(currentAsker+" asking "+currentAnswerer);
     io.emit('user_list_updated', JSON.stringify(users));
     io.emit('go_to_round', JSON.stringify(round));
