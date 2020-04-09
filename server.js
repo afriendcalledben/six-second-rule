@@ -5,13 +5,25 @@ const socketIO = require('socket.io');
 const fs = require('fs');
 
 const PORT = process.env.PORT || 3000;
+const INDEX_ADDROOM = '/chooseroom.html'
 const INDEX = '/index.html';
 
-const server = express()
-  .use("/", (req, res) => res.sendFile(INDEX, { root: __dirname }))
-  .listen(PORT, () => console.log(`Listening on ${PORT}`));
+var roomID = "";
 
-const io = socketIO(server);
+const server = express();
+server.get("/", function(req, res) {
+   console.log('ROOM: No room specified');
+   res.sendFile(INDEX_ADDROOM, { root: __dirname });
+ });
+server.get("/game/:room", function(req, res) {
+  roomID = req.params.room;
+   console.log('ROOM: '+req.params.room);
+   res.sendFile(INDEX, { root: __dirname });
+ });
+const http = require('http').createServer(server);
+http.listen(PORT, () => console.log(`Listening on ${PORT}`));
+
+const io = socketIO(http);
 
 var users = [];
 var userDict = {};
@@ -32,9 +44,16 @@ var readyToPlayTotal = 0;
 
 var coloursinuse = [];
 
-io.on('connection', function(socket){
-
+io.on('connection', function(socket)
+{
   console.log('User '+socket.id+' connected');
+  socket.on("joinRoom", function(room) {
+        // only allow certain characters in room names
+        // to prevent messing with socket.io internal rooms
+        if (!(/[^\w.]/.test(room))) {
+            socket.join(room);
+        }
+  });
   io.to(socket.id).emit('game_state', gameState);
   io.to(socket.id).emit('user_list_updated', JSON.stringify(users));
   // All players ready to play!
@@ -196,4 +215,4 @@ io.on('connection', function(socket){
       }, 5000);
     }
   });
-})
+});

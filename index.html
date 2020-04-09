@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Socket.IO chat</title>
+    <title>Six Second Rule</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -80,6 +80,17 @@
 <script>
   $(function () {
     var socket = io();
+    var currentRoom = "";
+    socket.on('connected', function() {
+        console.log("CONNECTED");
+        // get path from current URL
+        currentRoom = window.location.pathname.slice(6);   // remove leading /chat/
+        let pos = room.indexOf('/');
+        if (pos !== -1) {
+            currentRoom = room.slice(0, pos);
+        }
+        socket.emit("joinRoom", room);
+    });
     var user_entered = false;
     var name = "";
     var usercolour = "";
@@ -87,6 +98,7 @@
     var timerId = -1;
     var gameState = 0;
     var currentRound = {};
+    var cardShown = false;
     var card_colours = ['#5bc0eb','#fde74c','#9bc53d','#e55934','#fa7921'];
     $('#user_name').submit(function(e){
       e.preventDefault(); // prevents page reloading
@@ -226,6 +238,8 @@
 
     function showCard(question)
     {
+      if (cardShown) return;
+      cardShown = true;
       var random_colour = Math.floor(Math.random() * (card_colours.length-0.00001));
       var color = card_colours[random_colour];
       $('#question_text').text('Name 3 '+question);
@@ -236,6 +250,7 @@
 
     function hideCard()
     {
+      cardShown = false;
       console.log("HIDE CARD");
       $('#game').flip(false);
     }
